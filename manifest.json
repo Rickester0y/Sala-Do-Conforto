@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "Sala Confortável",
+  "version": "1.0.0",
+  "description": "Personalize o visual da Sala do Futuro para deixar o ambiente de estudo mais confortável.",
+
+  "permissions": ["storage"],
+
+  "action": {
+    "default_popup": "popup.html"
+  },
+
+  "content_scripts": [
+    {
+      "matches": ["https://saladofuturo.educacao.sp.gov.br/*"],
+      "js": ["themes.js", "content.js"],
+      "run_at": "document_start"
+    }
+  ],
+
+  "web_accessible_resources": [
+    {
+      "resources": ["*.svg", "*.jpg", "*.jpeg", "*.png", "*.webp"],
+      "matches": ["https://saladofuturo.educacao.sp.gov.br/*"]
+    }
+  ]
+}
