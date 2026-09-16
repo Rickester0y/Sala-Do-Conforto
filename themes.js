@@ -63,6 +63,39 @@ const SALA_CONFORTAVEL_THEMES = {
     }
   },
 
+  vinhoTinto: {
+    label: "Vinho Tinto 🍷",
+    vars: {
+      "--sf-bg": "#241014",
+      "--sf-bg-secundario": "#3a1b21",
+      "--sf-texto": "#f2e3e6",
+      "--sf-destaque": "#e08fa0",
+      "--sf-fonte": "inherit"
+    }
+  },
+
+  verdeMusgo: {
+    label: "Verde Musgo 🌿",
+    vars: {
+      "--sf-bg": "#10201a",
+      "--sf-bg-secundario": "#1c332a",
+      "--sf-texto": "#e6f0ea",
+      "--sf-destaque": "#7bc99a",
+      "--sf-fonte": "inherit"
+    }
+  },
+
+  grafite: {
+    label: "Grafite",
+    vars: {
+      "--sf-bg": "#1e1f24",
+      "--sf-bg-secundario": "#2c2d33",
+      "--sf-texto": "#e7e7ea",
+      "--sf-destaque": "#a495ff",
+      "--sf-fonte": "inherit"
+    }
+  },
+
   auroraNoturna: {
     label: "Aurora Noturna 🌌",
     // "imagem" é o nome do arquivo de imagem, colocado na MESMA pasta dos outros
@@ -110,7 +143,7 @@ function gerarCSSDoTema(tema) {
   const regraFundo = tema.imagem
     ? `
       background-image:
-        linear-gradient(rgba(10, 17, 40, 0.55), rgba(10, 17, 40, 0.55)),
+        linear-gradient(rgba(10, 17, 40, 0.35), rgba(10, 17, 40, 0.35)),
         url("${chrome.runtime.getURL(tema.imagem)}") !important;
       background-size: cover !important;
       background-position: center !important;
@@ -144,24 +177,9 @@ function gerarCSSDoTema(tema) {
 
     /* Área principal de conteúdo — fica transparente de propósito, pra deixar
        aparecer o que estiver por trás (a cor OU a imagem de fundo do body/#root) */
-    .MuiContainer-root {
+    html body .MuiContainer-root {
       background-color: transparent !important;
       color: var(--sf-texto) !important;
-    }
-
-    /* Camadas de layout que ficam entre o #root e o conteúdo de verdade (o "invólucro"
-       da página inteira, e a biblioteca simplebar que cuida da rolagem) não têm cor
-       própria de propósito — ficam sempre transparentes, garantido via CSS puro (sem
-       depender de JavaScript medir nada, o que evitava rodar bem na hora certa em
-       toda troca de página dentro do site). */
-    #root > div,
-    [data-simplebar],
-    .simplebar-wrapper,
-    .simplebar-mask,
-    .simplebar-offset,
-    .simplebar-content-wrapper,
-    .simplebar-content {
-      background: transparent !important;
     }
 
     /* Cards e blocos de superfície (Paper/Card do Material UI) */

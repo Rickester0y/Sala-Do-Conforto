@@ -106,7 +106,7 @@ function estaDentroDoMenuLateral(el) {
 // Percorre a página e escurece na marra qualquer elemento com fundo claro
 // que os seletores fixos do themes.js não tenham pego (cards com classes
 // dinâmicas do Material UI, que mudam a cada card/página).
-function corrigirFundosClaros(temaVars) {
+function corrigirFundosClaros(temaVars, temaTemImagem) {
   if (!temaVars || Object.keys(temaVars).length === 0) return;
 
   const bgSecundario = temaVars["--sf-bg-secundario"];
@@ -129,7 +129,29 @@ function corrigirFundosClaros(temaVars) {
   });
 
   candidatos.forEach((el) => {
-    el.style.setProperty("background-color", bgSecundario, "important");
+    // Quando o tema tem imagem de fundo, o "wrapper" que envolve a página inteira
+    // (filho direto de #root) vira TRANSPARENTE em vez de ganhar cor sólida — senão
+    // ele tampa a imagem por completo. Tratamos ele como "tela cheia" direto pela
+    // posição no HTML (não medindo tamanho), porque medir no meio de uma troca de
+    // página pode pegar um valor errado (0) e travar isso errado pra sempre.
+    // Quando o tema tem imagem de fundo, um wrapper "gigante" (que cobre quase a
+    // tela toda, tipo o filho direto de #root, ou outros wrappers estruturais do
+    // Material UI que ficam entre o menu de rolagem e o conteúdo) vira TRANSPARENTE
+    // em vez de ganhar cor sólida — senão ele tampa a imagem por completo.
+    // Quando o tema tem imagem de fundo, um wrapper "gigante" vira TRANSPARENTE em
+    // vez de ganhar cor sólida — senão ele tampa a imagem por completo. Em vez de
+    // medir o tamanho dele (o que pode dar errado bem no meio de uma troca de
+    // página, travando a decisão errada pra sempre), identificamos ele pela
+    // POSIÇÃO FIXA na estrutura do HTML — isso não muda nunca, seja qual for a
+    // página aberta dentro do site:
+    //   - filho direto de #root (o "invólucro" de toda a página)
+    //   - filho direto de .simplebar-content (o wrapper logo antes do Container,
+    //     que vimos ser o culpado real de tampar a imagem)
+    const ehFilhoDoRoot = el.parentElement && el.parentElement.id === "root";
+    const ehFilhoDoSimplebarContent = el.parentElement && el.parentElement.classList.contains("simplebar-content");
+    const vaiFicarTransparente = temaTemImagem && (ehFilhoDoRoot || ehFilhoDoSimplebarContent);
+
+    el.style.setProperty("background-color", vaiFicarTransparente ? "transparent" : bgSecundario, "important");
     el.style.setProperty("background-image", "none", "important");
     el.style.setProperty("color", corTexto, "important");
     el.style.setProperty("border-radius", "10px", "important");
@@ -307,7 +329,7 @@ function quandoBodyExistir(callback) {
 let correcaoAgendada = false;
 
 function rodarCorrecaoCompleta() {
-  corrigirFundosClaros(temaVarsAtuais);
+  corrigirFundosClaros(temaVarsAtuais, Boolean(temaImagemAtual));
   corrigirBordasInternasClaras();
   corrigirElevacoes();
   corrigirIconesEscuros();
