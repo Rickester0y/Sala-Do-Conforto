@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Sala Confortável</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --sc-primaria: #6d4fff;
+      --sc-primaria-escura: #4f34d1;
+      --sc-secundaria: #ff6fa5;
+      --sc-superficie: #332f3a;
+      --sc-superficie-cartao: #403c49;
+      --sc-texto: #f1eff5;
+      --sc-texto-suave: #a9a5b6;
+      --sc-texto-sobre-fundo: #c9c6d3;
+      --sc-cor-modos: #6d4fff;
+      --sc-cor-cores: #2e9e5b;
+      --sc-cor-fotos: #ff6fa5;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      width: 310px;
+      margin: 0;
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      background-color: #242329;
+      background-image: url("images/popup-fundo.svg");
+      background-size: cover;
+      background-position: top center;
+      background-repeat: no-repeat;
+      color: var(--sc-texto);
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 18px 18px 16px;
+      background-color: var(--sc-primaria);
+      background-image: linear-gradient(135deg, var(--sc-primaria), var(--sc-primaria-escura) 70%);
+      background-size: cover;
+      background-position: center;
+      color: #fff;
+      position: relative;
+      overflow: hidden;
+      transition: background-image 0.2s ease;
+    }
+
+    /* Camada por cima do fundo do cabeçalho: um brilho sutil (funciona em
+       qualquer cor) + uma leve escurecida geral, pra garantir que o texto
+       branco continue legível mesmo quando o fundo vira a cor de um tema
+       claro (ex: Tons Pastel) ou uma foto muito clara. */
+    header::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 100% 0%, rgba(255, 255, 255, 0.18), transparent 55%);
+      pointer-events: none;
+    }
+
+    /* Logo "SF" (inspirado no "Sala do Futuro"): uma miniatura fixa que não
+       muda de tamanho/posição, só o fundo do cabeçalho muda atrás dela. */
+    .cabecalho-logo {
+      width: 34px;
+      height: 34px;
+      border-radius: 9px;
+      background: rgba(0, 0, 0, 0.38);
+      border: 1.5px solid rgba(255, 255, 255, 0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 13px;
+      letter-spacing: 0.5px;
+      color: #fff;
+      flex-shrink: 0;
+      position: relative;
+      backdrop-filter: blur(2px);
+      -webkit-text-stroke: 1px rgba(0, 0, 0, 0.5);
+      paint-order: stroke fill;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: 0.2px;
+      position: relative;
+      -webkit-text-stroke: 1.5px rgba(0, 0, 0, 0.6);
+      paint-order: stroke fill;
+      text-shadow: 0 2px 5px rgba(0, 0, 0, 0.35);
+    }
+
+    header p {
+      margin: 2px 0 0;
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.92);
+      position: relative;
+      -webkit-text-stroke: 1px rgba(0, 0, 0, 0.6);
+      paint-order: stroke fill;
+      text-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+    }
+
+    main {
+      padding: 16px 16px 18px;
+    }
+
+    /* Variante usada quando o fundo do cabeçalho é um tema claro (ex: Tons
+       Pastel, Floresta Calma): texto branco sobre fundo claro é fraco por
+       natureza, então aqui invertemos — texto ESCURO com contorno CLARO —
+       em vez de insistir no branco com contorno escuro. Qual variante usar é
+       decidido no popup.js, com base na luminância da cor do tema. */
+    .cabecalho-claro h1 {
+      color: #2a2730;
+      -webkit-text-stroke: 1.5px rgba(255, 255, 255, 0.7);
+      text-shadow: 0 1px 3px rgba(255, 255, 255, 0.3);
+    }
+
+    .cabecalho-claro p {
+      color: rgba(42, 39, 48, 0.82);
+      -webkit-text-stroke: 1px rgba(255, 255, 255, 0.7);
+      text-shadow: 0 1px 3px rgba(255, 255, 255, 0.25);
+    }
+
+    .cabecalho-claro .cabecalho-logo {
+      background: rgba(255, 255, 255, 0.6);
+      border-color: rgba(42, 39, 48, 0.45);
+      color: #2a2730;
+      -webkit-text-stroke: 0.5px rgba(255, 255, 255, 0.4);
+    }
+
+    details.secao-temas {
+      margin-bottom: 10px;
+      background: var(--sc-superficie);
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    }
+
+    .secao-titulo {
+      list-style: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      padding: 10px 12px;
+      margin: 0;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--sc-texto);
+    }
+
+    .secao-titulo::-webkit-details-marker {
+      display: none;
+    }
+
+    details.secao-temas[open] > .secao-titulo {
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .secao-titulo-texto {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .secao-titulo-ponto {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--sc-primaria);
+      flex-shrink: 0;
+    }
+
+    .secao-modos .secao-titulo-ponto { background: var(--sc-cor-modos); }
+    .secao-cores .secao-titulo-ponto { background: var(--sc-cor-cores); }
+    .secao-fotos .secao-titulo-ponto { background: var(--sc-cor-fotos); }
+
+    .secao-titulo .seta {
+      transition: transform 0.15s ease;
+      color: var(--sc-texto-suave);
+      font-size: 10px;
+      flex-shrink: 0;
+    }
+
+    details.secao-temas[open] .secao-titulo .seta {
+      transform: rotate(90deg);
+    }
+
+    .grade-temas {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      padding: 10px 12px 12px;
+    }
+
+    .tema-card {
+      position: relative;
+      border: 2px solid transparent;
+      border-radius: 10px;
+      background: var(--sc-superficie-cartao);
+      padding: 8px;
+      cursor: pointer;
+      text-align: left;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+      transition: transform 0.1s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+    }
+
+    .tema-card:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 14px rgba(0, 0, 0, 0.45);
+    }
+
+    .tema-card.selecionado {
+      border-color: var(--sc-primaria);
+      box-shadow: 0 0 0 3px rgba(109, 79, 255, 0.15);
+    }
+
+    .tema-card .amostra {
+      display: flex;
+      height: 28px;
+      border-radius: 6px;
+      overflow: hidden;
+      margin-bottom: 6px;
+    }
+
+    .tema-card .amostra span {
+      flex: 1;
+    }
+
+    .tema-card .nome-tema {
+      display: block;
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--sc-texto);
+      line-height: 1.25;
+    }
+
+    .tema-card .check {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--sc-primaria);
+      color: #fff;
+      font-size: 11px;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+    }
+
+    .tema-card.selecionado .check {
+      display: flex;
+    }
+
+    details.tema-custom {
+      background: var(--sc-superficie);
+      border-radius: 10px;
+      border: 1.5px dashed rgba(109, 79, 255, 0.35);
+      overflow: hidden;
+    }
+
+    details.tema-custom summary {
+      list-style: none;
+      cursor: pointer;
+      padding: 11px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--sc-texto);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    details.tema-custom summary::-webkit-details-marker {
+      display: none;
+    }
+
+    details.tema-custom summary .seta {
+      transition: transform 0.15s ease;
+      color: var(--sc-primaria);
+      font-size: 10px;
+    }
+
+    details.tema-custom[open] summary .seta {
+      transform: rotate(90deg);
+    }
+
+    details.tema-custom[open] summary {
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .cores-corpo {
+      padding: 4px 12px 12px;
+    }
+
+    .cor-linha {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 0;
+      font-size: 12px;
+      color: var(--sc-texto-suave);
+    }
+
+    .cor-linha input[type="color"] {
+      width: 30px;
+      height: 22px;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 5px;
+      padding: 0;
+      cursor: pointer;
+      background: none;
+    }
+
+    .preview-custom {
+      height: 26px;
+      border-radius: 6px;
+      margin: 8px 0 10px;
+      overflow: hidden;
+      display: flex;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+    }
+
+    .preview-custom span {
+      flex: 1;
+    }
+
+    button#salvar-custom {
+      width: 100%;
+      padding: 9px;
+      border: none;
+      border-radius: 7px;
+      background: linear-gradient(135deg, var(--sc-primaria), var(--sc-primaria-escura));
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: filter 0.15s ease;
+    }
+
+    button#salvar-custom:hover {
+      filter: brightness(1.08);
+    }
+
+    button#salvar-custom.salvo {
+      background: #2e9e5b;
+    }
+
+    footer {
+      padding: 10px 16px 14px;
+      text-align: center;
+      font-size: 10px;
+      color: rgba(201, 198, 211, 0.55);
+    }
+  </style>
+</head>
+<body>
+  <header id="cabecalho-popup">
+    <div class="cabecalho-logo">SF</div>
+    <div>
+      <h1>Sala Confortável</h1>
+      <p>Personalize a Sala do Futuro</p>
+    </div>
+  </header>
+
+  <main>
+    <div id="lista-temas"><!-- Preenchido pelo popup.js, agrupado por categoria --></div>
+
+    <details class="tema-custom" id="detalhes-custom">
+      <summary>
+        <span>🖌️ Criar meu próprio tema</span>
+        <span class="seta">▶</span>
+      </summary>
+      <div class="cores-corpo">
+        <div class="cor-linha">
+          <span>Fundo</span>
+          <input type="color" id="cor-bg" value="#1a1a1d" />
+        </div>
+        <div class="cor-linha">
+          <span>Fundo dos cards</span>
+          <input type="color" id="cor-bg-secundario" value="#2c2c30" />
+        </div>
+        <div class="cor-linha">
+          <span>Texto</span>
+          <input type="color" id="cor-texto" value="#e8e8e8" />
+        </div>
+        <div class="cor-linha">
+          <span>Destaque</span>
+          <input type="color" id="cor-destaque" value="#4f9dff" />
+        </div>
+
+        <div class="preview-custom" id="preview-custom"></div>
+
+        <button id="salvar-custom">Usar meu tema</button>
+      </div>
+    </details>
+  </main>
+
+  <footer>Feito por um aluno, pra outros alunos 💙</footer>
+
+
+  <script src="themes.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
