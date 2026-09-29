@@ -7,6 +7,7 @@ const SALA_CONFORTAVEL_MARCADOR = "data-sc-ajustado"; // evita reprocessar o mes
 const SALA_CONFORTAVEL_MARCADOR_BORDA = "data-sc-borda"; // marca elementos com borda interna corrigida
 const SALA_CONFORTAVEL_MARCADOR_ELEV = "data-sc-elevacao"; // marca elementos com sombra trocada por borda
 const SALA_CONFORTAVEL_MARCADOR_ICONE = "data-sc-icone"; // marca ícones pequenos com brilho ajustado
+const SALA_CONFORTAVEL_MARCADOR_TEXTO = "data-sc-texto"; // marca texto de contraste corrigido
 const SALA_CONFORTAVEL_CLASSE_CARREGANDO = "sala-confortavel-carregando";
 
 // Esconde o CONTEÚDO da página (não o <html> inteiro) e pinta o fundo com a cor do
@@ -76,10 +77,28 @@ function corEhAcentoColorido(corCss) {
   return maxC - minC > 25; // cor "colorida" (não cinza/preto/branco)
 }
 
+// Uma cor semitransparente (ex: rgba(255,140,0,0.4), acento laranja de um card)
+// foi desenhada pra se misturar com o fundo BRANCO original do site — contra o
+// nosso fundo escuro, a mesma mistura vira um marrom escuro quase invisível (a
+// cor nunca muda, só o que está atrás dela). Calcula o equivalente OPACO dessa
+// mistura como se ainda estivesse sobre branco, pra manter a aparência original
+// sem depender mais do que está atrás. Retorna null se já for opaca o bastante
+// (nada pra solidificar).
+function corSolidificadaSobreBranco(corCss) {
+  const numeros = corCss.match(/[\d.]+/g);
+  if (!numeros || numeros.length < 4) return null; // sem 4º número = já é opaca (rgb, não rgba)
+  const [r, g, b] = numeros.map(Number);
+  const alpha = Number(numeros[3]);
+  if (alpha >= 0.95) return null;
+  const misturarComBranco = (canal) => Math.round(canal * alpha + 255 * (1 - alpha));
+  return `rgb(${misturarComBranco(r)}, ${misturarComBranco(g)}, ${misturarComBranco(b)})`;
+}
+
 // Aplica uma borda padrão (branca semitransparente) em volta do elemento. A borda de
 // baixo é tratada à parte: se o site já definiu alguma borda ali (seja lá qual for a
-// cor — pode ser um acento colorido de propósito), a gente deixa 100% intocada; se não
-// tinha nenhuma, aplicamos a borda padrão também, pra não deixar o card "aberto" embaixo.
+// cor — pode ser um acento colorido de propósito), a gente preserva a APARÊNCIA dela
+// (solidificando se for semitransparente, ver corSolidificadaSobreBranco acima); se
+// não tinha nenhuma, aplicamos a borda padrão também, pra não deixar o card "aberto".
 function aplicarBordaPreservandoAcentos(el, bordaPadrao) {
   ["Top", "Right", "Left"].forEach((lado) => {
     el.style.setProperty(`border-${lado.toLowerCase()}`, bordaPadrao, "important");
@@ -90,6 +109,16 @@ function aplicarBordaPreservandoAcentos(el, bordaPadrao) {
   const temBordaBottomPropria = larguraBottom > 0 && estilo.borderBottomStyle !== "none";
   if (!temBordaBottomPropria) {
     el.style.setProperty("border-bottom", bordaPadrao, "important");
+    return;
+  }
+
+  const corSolida = corSolidificadaSobreBranco(estilo.borderBottomColor);
+  if (corSolida) {
+    el.style.setProperty(
+      "border-bottom",
+      `${estilo.borderBottomWidth} ${estilo.borderBottomStyle} ${corSolida}`,
+      "important"
+    );
   }
 }
 
@@ -132,83 +161,70 @@ function ehWrapperEstrutural(el) {
   return ehFilhoDoRoot || ehFilhoDoSimplebarContent || ehFilhoDeGridItem;
 }
 
-// Percorre a página e escurece na marra qualquer elemento com fundo claro
-// que os seletores fixos do themes.js não tenham pego (cards com classes
-// dinâmicas do Material UI, que mudam a cada card/página).
-function corrigirFundosClaros(temaVars, temaTemImagem) {
-  if (!temaVars || Object.keys(temaVars).length === 0) return;
+// Escurece na marra um elemento com fundo claro que os seletores fixos do
+// themes.js não tenham pego (cards com classes dinâmicas do Material UI, que
+// mudam a cada card/página). Recebe "el" e o "estilo" (getComputedStyle) já
+// calculados por quem chama — ver rodarCorrecaoCompleta, que faz UMA varredura
+// só e reaproveita a mesma leitura de estilo entre as 5 correções, em vez de
+// cada uma escanear a página inteira e recalcular estilo do zero sozinha.
+function corrigirFundoClaro(el, estilo, bgPagina, bgCard, corTexto, temaTemImagem) {
+  if (el.hasAttribute(SALA_CONFORTAVEL_MARCADOR)) return;
+  if (el.id === "root") return; // já é coberto pelo CSS fixo (inclusive imagem de fundo, se houver)
 
-  const bgPagina = temaVars["--sf-bg"];
-  const bgCard = temaVars["--sf-bg-elevado"] || temaVars["--sf-bg-secundario"];
-  const corTexto = temaVars["--sf-texto"];
+  const bg = estilo.backgroundColor;
+  const temFundoSolidoClaro = bg && bg !== "rgba(0, 0, 0, 0)" && bg !== "transparent" && corEhClara(bg);
 
-  const candidatos = Array.from(document.querySelectorAll("body *:not(script):not(style)")).filter((el) => {
-    if (el.hasAttribute(SALA_CONFORTAVEL_MARCADOR)) return false;
-    if (estaDentroDoMenuLateral(el)) return false;
-    if (el.id === "root") return false; // já é coberto pelo CSS fixo (inclusive imagem de fundo, se houver)
+  // Alguns painéis usam gradiente (ex: "Meus pontos") em vez de cor sólida —
+  // background-color sozinho não pega isso, então checamos background-image também.
+  const temGradiente = estilo.backgroundImage && estilo.backgroundImage !== "none" && estilo.backgroundImage.includes("gradient");
 
-    const estilo = getComputedStyle(el);
-    const bg = estilo.backgroundColor;
-    const temFundoSolidoClaro = bg && bg !== "rgba(0, 0, 0, 0)" && bg !== "transparent" && corEhClara(bg);
+  if (!(temFundoSolidoClaro || temGradiente)) return;
 
-    // Alguns painéis usam gradiente (ex: "Meus pontos") em vez de cor sólida —
-    // background-color sozinho não pega isso, então checamos background-image também.
-    const temGradiente = estilo.backgroundImage && estilo.backgroundImage !== "none" && estilo.backgroundImage.includes("gradient");
+  // Preserva selos/pílulas pequenos com cor de propósito — ex: os percentuais
+  // de presença (vermelho = ruim, amarelo = regular, verde = bom). Mesma
+  // lógica do "acento colorido" já usada pra borda (corEhAcentoColorido),
+  // agora aplicada ao fundo: cor saturada (não cinza/branco) + elemento
+  // pequeno (não é card de conteúdo) = repintar destruiria uma informação
+  // que o site está passando de propósito.
+  // IMPORTANTE: "pequeno" exige largura E altura baixas (formato de selo/
+  // pílula de verdade) — com "ou" antes, uma barra fina e LARGA (ex: o
+  // rodapé "Resolução" de uma tarefa, baixo mas ocupando a largura toda)
+  // também caía nessa exceção por engano e ficava sem tema.
+  const retangulo = el.getBoundingClientRect();
+  const ehPequeno = retangulo.width <= 150 && retangulo.height <= 60;
+  if (temFundoSolidoClaro && ehPequeno && corEhAcentoColorido(bg)) return;
 
-    if (!(temFundoSolidoClaro || temGradiente)) return false;
+  // Identifica wrappers estruturais pela posição fixa na árvore HTML (não por
+  // tamanho medido — medir no meio de uma troca de página pode dar um valor
+  // errado e travar a decisão errada pra sempre). Ver ehWrapperEstrutural().
+  const wrapperEstrutural = ehWrapperEstrutural(el);
 
-    // Preserva selos/pílulas pequenos com cor de propósito — ex: os percentuais
-    // de presença (vermelho = ruim, amarelo = regular, verde = bom). Mesma
-    // lógica do "acento colorido" já usada pra borda (corEhAcentoColorido),
-    // agora aplicada ao fundo: cor saturada (não cinza/branco) + elemento
-    // pequeno (não é card de conteúdo) = repintar destruiria uma informação
-    // que o site está passando de propósito.
-    const retangulo = el.getBoundingClientRect();
-    const ehPequeno = !(retangulo.width > 150 && retangulo.height > 60);
-    if (temFundoSolidoClaro && ehPequeno && corEhAcentoColorido(bg)) return false;
+  // Wrapper estrutural: fica no tom "de página" (o mesmo do body/#root), não
+  // mais no secundário — senão ele "roubava" a cor do cabeçalho/menu e dava a
+  // sensação de tudo ser uma cor só. Com imagem de fundo, continua
+  // transparente (senão tampa a foto — bug 7.10).
+  // Card de verdade: fica no tom "elevado", um degrau diferente do
+  // cabeçalho/menu, pra combinar com os cards cobertos pelo CSS fixo
+  // (.MuiPaper-root) e manter a hierarquia visual consistente.
+  const corDeFundo = wrapperEstrutural ? (temaTemImagem ? "transparent" : bgPagina) : bgCard;
 
-    return true;
-  });
+  el.style.setProperty("background-color", corDeFundo, "important");
+  el.style.setProperty("background-image", "none", "important");
+  el.style.setProperty("color", corTexto, "important");
+  el.style.setProperty("border-radius", "10px", "important");
+  el.setAttribute(SALA_CONFORTAVEL_MARCADOR, "1");
 
-  candidatos.forEach((el) => {
-    // Identifica wrappers estruturais pela posição fixa na árvore HTML (não por
-    // tamanho medido — medir no meio de uma troca de página pode dar um valor
-    // errado e travar a decisão errada pra sempre). Ver ehWrapperEstrutural().
-    const wrapperEstrutural = ehWrapperEstrutural(el);
+  // Wrappers estruturais (que envolvem a página/o grupo inteiro de cards) NÃO
+  // levam borda — no site original eles não têm nenhuma, e colocar uma cria
+  // aquele "contorno gigante" em volta de tudo, que não existe no original.
+  if (wrapperEstrutural) return;
 
-    // Wrapper estrutural: fica no tom "de página" (o mesmo do body/#root), não
-    // mais no secundário — senão ele "roubava" a cor do cabeçalho/menu e dava a
-    // sensação de tudo ser uma cor só. Com imagem de fundo, continua
-    // transparente (senão tampa a foto — bug 7.10).
-    // Card de verdade: fica no tom "elevado", um degrau diferente do
-    // cabeçalho/menu, pra combinar com os cards cobertos pelo CSS fixo
-    // (.MuiPaper-root) e manter a hierarquia visual consistente.
-    let corDeFundo;
-    if (wrapperEstrutural) {
-      corDeFundo = temaTemImagem ? "transparent" : bgPagina;
-    } else {
-      corDeFundo = bgCard;
-    }
-
-    el.style.setProperty("background-color", corDeFundo, "important");
-    el.style.setProperty("background-image", "none", "important");
-    el.style.setProperty("color", corTexto, "important");
-    el.style.setProperty("border-radius", "10px", "important");
-    el.setAttribute(SALA_CONFORTAVEL_MARCADOR, "1");
-
-    // Wrappers estruturais (que envolvem a página/o grupo inteiro de cards) NÃO
-    // levam borda — no site original eles não têm nenhuma, e colocar uma cria
-    // aquele "contorno gigante" em volta de tudo, que não existe no original.
-    if (wrapperEstrutural) return;
-
-    // Só deixa a borda bem visível em elementos grandes (cards de conteúdo de verdade).
-    // Elementos pequenos (ícones, botões do menu) ganham uma borda quase imperceptível,
-    // pra não deixar a tela inteira "riscada" de branco.
-    const retangulo = el.getBoundingClientRect();
-    const ehCardGrande = retangulo.width > 150 && retangulo.height > 60;
-    const opacidadeBorda = ehCardGrande ? 0.4 : 0.06;
-    aplicarBordaPreservandoAcentos(el, `2px solid rgba(255, 255, 255, ${opacidadeBorda})`);
-  });
+  // Só deixa a borda bem visível em elementos grandes (cards de conteúdo de verdade).
+  // Elementos pequenos (ícones, botões do menu) ganham uma borda quase imperceptível,
+  // pra não deixar a tela inteira "riscada" de branco.
+  const ehCardGrande = retangulo.width > 150 && retangulo.height > 60;
+  const opacidadeBorda = ehCardGrande ? 0.4 : 0.06;
+  aplicarBordaPreservandoAcentos(el, `2px solid rgba(255, 255, 255, ${opacidadeBorda})`);
 }
 
 // Corrige linhas divisórias/bordas internas que eram cinza-claras no site original
@@ -245,37 +261,32 @@ function precisaClarear(corCss) {
 // aos cards com elevação. Assim como a borda, essa sombra é praticamente invisível
 // em cima do nosso fundo escuro. Em vez de tentar clarear a sombra (complicado de
 // calcular com precisão), a gente simplesmente troca por uma borda visível.
-function corrigirElevacoes() {
-  document.querySelectorAll("body *:not(script):not(style)").forEach((el) => {
-    if (el.hasAttribute(SALA_CONFORTAVEL_MARCADOR_ELEV)) return;
-    if (estaDentroDoMenuLateral(el)) return;
+function corrigirElevacao(el, estilo) {
+  if (el.hasAttribute(SALA_CONFORTAVEL_MARCADOR_ELEV)) return;
+  if (estilo.boxShadow === "none") return;
 
-    const estilo = getComputedStyle(el);
-    if (estilo.boxShadow === "none") return;
+  const retangulo = el.getBoundingClientRect();
+  const ehCardGrande = retangulo.width > 150 && retangulo.height > 60;
+  if (!ehCardGrande) return; // não mexe em sombra de botão pequeno, ícone etc.
 
-    const retangulo = el.getBoundingClientRect();
-    const ehCardGrande = retangulo.width > 150 && retangulo.height > 60;
-    if (!ehCardGrande) return; // não mexe em sombra de botão pequeno, ícone etc.
+  // Wrappers estruturais não levam borda (mesmo motivo de corrigirFundoClaro)
+  if (ehWrapperEstrutural(el)) return;
 
-    // Wrappers estruturais não levam borda (mesmo motivo de corrigirFundosClaros)
-    if (ehWrapperEstrutural(el)) return;
+  // Antes de apagar a sombra, verifica se alguma das cores dela é um "acento"
+  // colorido de propósito (a mesma técnica da linha embaixo dos cards, só que
+  // feita com box-shadow em vez de border). Se for, resgata essa cor como uma
+  // borda de verdade antes de jogar a sombra fora.
+  const coresDaSombra = estilo.boxShadow.match(/rgba?\([^)]+\)/g) || [];
+  const corDeAcento = coresDaSombra.find((cor) => corEhAcentoColorido(cor));
 
-    // Antes de apagar a sombra, verifica se alguma das cores dela é um "acento"
-    // colorido de propósito (a mesma técnica da linha embaixo dos cards, só que
-    // feita com box-shadow em vez de border). Se for, resgata essa cor como uma
-    // borda de verdade antes de jogar a sombra fora.
-    const coresDaSombra = estilo.boxShadow.match(/rgba?\([^)]+\)/g) || [];
-    const corDeAcento = coresDaSombra.find((cor) => corEhAcentoColorido(cor));
+  el.style.setProperty("box-shadow", "none", "important");
 
-    el.style.setProperty("box-shadow", "none", "important");
+  if (corDeAcento) {
+    el.style.setProperty("border-bottom", `3px solid ${corDeAcento}`, "important");
+  }
 
-    if (corDeAcento) {
-      el.style.setProperty("border-bottom", `3px solid ${corDeAcento}`, "important");
-    }
-
-    aplicarBordaPreservandoAcentos(el, "2px solid rgba(255, 255, 255, 0.3)");
-    el.setAttribute(SALA_CONFORTAVEL_MARCADOR_ELEV, "1");
-  });
+  aplicarBordaPreservandoAcentos(el, "2px solid rgba(255, 255, 255, 0.3)");
+  el.setAttribute(SALA_CONFORTAVEL_MARCADOR_ELEV, "1");
 }
 
 // Ícones pequenos (SVG ou <img>) do site original vêm em várias cores (cada um
@@ -285,49 +296,99 @@ function corrigirElevacoes() {
 // TODOS pra preto (brightness(0) zera qualquer cor, deixando só os pixels opacos
 // pretos) — mais previsível e sempre legível, em vez de brigar com a cor
 // original de cada ícone.
-function corrigirIconesEscuros(temaEhClaro) {
-  document.querySelectorAll("svg, img").forEach((el) => {
-    if (el.hasAttribute(SALA_CONFORTAVEL_MARCADOR_ICONE)) return;
+function corrigirIconeEscuro(el, temaEhClaro) {
+  if (el.hasAttribute(SALA_CONFORTAVEL_MARCADOR_ICONE)) return;
 
-    const retangulo = el.getBoundingClientRect();
-    const ehIconePequeno = retangulo.width > 0 && retangulo.width <= 40 && retangulo.height <= 40;
-    if (!ehIconePequeno) return;
+  const retangulo = el.getBoundingClientRect();
+  const ehIconePequeno = retangulo.width > 0 && retangulo.width <= 40 && retangulo.height <= 40;
+  if (!ehIconePequeno) return;
 
-    const filtro = temaEhClaro ? "brightness(0)" : "brightness(1.35) contrast(1.1)";
-    el.style.setProperty("filter", filtro, "important");
-    el.setAttribute(SALA_CONFORTAVEL_MARCADOR_ICONE, "1");
-  });
+  const filtro = temaEhClaro ? "brightness(0)" : "brightness(1.35) contrast(1.1)";
+  el.style.setProperty("filter", filtro, "important");
+  el.setAttribute(SALA_CONFORTAVEL_MARCADOR_ICONE, "1");
 }
 
-function corrigirBordasInternasClaras() {
-  const lados = ["Top", "Right", "Bottom", "Left"];
+function corrigirBordaInternaClara(el, estilo) {
+  if (el.hasAttribute(SALA_CONFORTAVEL_MARCADOR_BORDA)) return;
 
-  document.querySelectorAll("body *:not(script):not(style)").forEach((el) => {
-    if (el.hasAttribute(SALA_CONFORTAVEL_MARCADOR_BORDA)) return;
-    if (estaDentroDoMenuLateral(el)) return;
+  const ladosAjustados = [];
 
-    const estilo = getComputedStyle(el);
-    const ladosAjustados = [];
+  ["Top", "Right", "Bottom", "Left"].forEach((lado) => {
+    const largura = parseFloat(estilo[`border${lado}Width`]);
+    const tipoBorda = estilo[`border${lado}Style`];
+    const cor = estilo[`border${lado}Color`];
 
-    lados.forEach((lado) => {
-      const largura = parseFloat(estilo[`border${lado}Width`]);
-      const tipoBorda = estilo[`border${lado}Style`];
-      const cor = estilo[`border${lado}Color`];
-      const analise = largura > 0 && tipoBorda !== "none" ? precisaClarear(cor) : null;
+    // precisaClarear() só olha luminância — não sabe diferenciar um cinza
+    // claro neutro (que deve virar branco) de um acento vívido de propósito
+    // que por coincidência também é claro (luminância > 0.6), tipo um laranja
+    // ou salmão. corEhAcentoColorido() checa saturação: se a cor tiver hue
+    // de verdade (não for cinza/branco), é acento — não mexe, nem que a
+    // luminância mande clarear.
+    const ehAcento = corEhAcentoColorido(cor);
+    const analise = largura > 0 && tipoBorda !== "none" && !ehAcento ? precisaClarear(cor) : null;
 
-      if (analise) {
-        el.style.setProperty(`border-${lado.toLowerCase()}-color`, `rgba(255, 255, 255, ${analise.novaOpacidade})`, "important");
-        ladosAjustados.push(lado.toLowerCase());
-      }
-    });
-
-    if (ladosAjustados.length > 0) {
-      el.setAttribute(SALA_CONFORTAVEL_MARCADOR_BORDA, ladosAjustados.join(","));
+    if (analise) {
+      el.style.setProperty(`border-${lado.toLowerCase()}-color`, `rgba(255, 255, 255, ${analise.novaOpacidade})`, "important");
+      ladosAjustados.push(lado.toLowerCase());
     }
   });
+
+  if (ladosAjustados.length > 0) {
+    el.setAttribute(SALA_CONFORTAVEL_MARCADOR_BORDA, ladosAjustados.join(","));
+  }
 }
 
-// Remove os ajustes "na marra" feitos por corrigirFundosClaros (usado ao voltar pro tema Padrão)
+// O Material UI usa uma cor de texto "secundária" (cinza-escuro, às vezes
+// semitransparente) em vários componentes diferentes — cabeçalho de tabela,
+// legendas, citações etc. Funciona bem no fundo branco original, mas em tema
+// escuro fica quase invisível. temaEhClaro decide a direção: em tema escuro
+// procura texto ESCURO demais; em tema claro (o inverso, mais raro, mas
+// existe) procura texto CLARO demais.
+function corTextoPrecisaCorrigir(corCss, temaEhClaro) {
+  const numeros = corCss.match(/[\d.]+/g);
+  if (!numeros || numeros.length < 3) return false;
+  const [r, g, b] = numeros.map(Number);
+  const luminancia = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return temaEhClaro ? luminancia > 0.6 : luminancia < 0.45;
+}
+
+// Confere o elemento e até 2 ancestrais: se algum tiver um fundo local sólido
+// no sentido OPOSTO do tema (claro dentro de tema escuro, ou vice-versa — ex:
+// a pilulazinha verde/amarela dos percentuais de presença), o texto ali é DE
+// PROPÓSITO, contrastando com aquele fundo local, não com o card em volta.
+function temFundoLocalContrastante(el, temaEhClaro) {
+  let atual = el;
+  for (let i = 0; i < 3 && atual; i++) {
+    const bg = getComputedStyle(atual).backgroundColor;
+    if (bg && bg !== "rgba(0, 0, 0, 0)" && bg !== "transparent") {
+      const bgClaro = corEhClara(bg);
+      if (temaEhClaro ? !bgClaro : bgClaro) return true;
+    }
+    atual = atual.parentElement;
+  }
+  return false;
+}
+
+// Corrige contraste de texto em qualquer elemento que desenhe texto
+// DIRETAMENTE (tem um nó de texto como filho direto) — não exige que o
+// elemento seja uma "folha" pura, porque texto misturado com outros elementos
+// (ex: uma citação com um trecho em negrito e um link no meio) também conta,
+// e só olhar folhas puras deixava esses casos passarem batido.
+function corrigirContrasteTexto(el, estilo, corTexto, temaEhClaro) {
+  if (el.hasAttribute(SALA_CONFORTAVEL_MARCADOR_TEXTO)) return;
+
+  const temTextoDireto = Array.from(el.childNodes).some(
+    (no) => no.nodeType === Node.TEXT_NODE && no.textContent.trim().length > 0
+  );
+  if (!temTextoDireto) return;
+
+  if (corTextoPrecisaCorrigir(estilo.color, temaEhClaro) && !temFundoLocalContrastante(el, temaEhClaro)) {
+    el.style.setProperty("color", corTexto, "important");
+    el.setAttribute(SALA_CONFORTAVEL_MARCADOR_TEXTO, "1");
+  }
+}
+
+// Remove os ajustes "na marra" feitos por corrigirFundoClaro (usado ao voltar pro tema Padrão)
 function removerCorrecoesManuais() {
   document.querySelectorAll(`[${SALA_CONFORTAVEL_MARCADOR}]`).forEach((el) => {
     el.style.removeProperty("background-color");
@@ -353,6 +414,11 @@ function removerCorrecoesManuais() {
   document.querySelectorAll(`[${SALA_CONFORTAVEL_MARCADOR_ICONE}]`).forEach((el) => {
     el.style.removeProperty("filter");
     el.removeAttribute(SALA_CONFORTAVEL_MARCADOR_ICONE);
+  });
+
+  document.querySelectorAll(`[${SALA_CONFORTAVEL_MARCADOR_TEXTO}]`).forEach((el) => {
+    el.style.removeProperty("color");
+    el.removeAttribute(SALA_CONFORTAVEL_MARCADOR_TEXTO);
   });
 }
 
@@ -381,11 +447,45 @@ function quandoBodyExistir(callback) {
 
 let correcaoAgendada = false;
 
+// Roda as 5 correções (fundo claro, borda interna clara, elevação, ícone
+// escuro, contraste de texto) numa ÚNICA varredura da página, em vez de cada
+// uma escanear "body *" sozinha (5 varreduras completas + 5 leituras de
+// getComputedStyle por elemento). Aqui é uma varredura só, e o "estilo" e o
+// "está dentro do menu lateral?" de cada elemento são calculados uma vez e
+// reaproveitados pelas 5 correções — bem mais leve em páginas com bastante
+// conteúdo dinâmico (ex: a tabela de Presença, que roda essa correção de
+// novo a cada mutação do DOM da SPA).
 function rodarCorrecaoCompleta() {
-  corrigirFundosClaros(temaVarsAtuais, Boolean(temaImagemAtual));
-  corrigirBordasInternasClaras();
-  corrigirElevacoes();
-  corrigirIconesEscuros(temaEhClaroAtual);
+  const vars = temaVarsAtuais;
+  const temaTemImagem = Boolean(temaImagemAtual);
+  const temaEhClaro = temaEhClaroAtual;
+
+  const habilitarFundo = vars && Object.keys(vars).length > 0;
+  const bgPagina = habilitarFundo ? vars["--sf-bg"] : null;
+  const bgCard = habilitarFundo ? (vars["--sf-bg-elevado"] || vars["--sf-bg-secundario"]) : null;
+  const corTexto = habilitarFundo ? vars["--sf-texto"] : null;
+
+  document.querySelectorAll("body *:not(script):not(style)").forEach((el) => {
+    const dentroDoMenu = estaDentroDoMenuLateral(el);
+    const estilo = getComputedStyle(el); // 1 leitura só — objeto "vivo", reflete as mutações feitas logo abaixo
+
+    if (habilitarFundo && !dentroDoMenu) {
+      corrigirFundoClaro(el, estilo, bgPagina, bgCard, corTexto, temaTemImagem);
+    }
+
+    if (!dentroDoMenu) {
+      corrigirBordaInternaClara(el, estilo);
+      corrigirElevacao(el, estilo);
+    }
+
+    if (el.tagName === "SVG" || el.tagName === "IMG") {
+      corrigirIconeEscuro(el, temaEhClaro);
+    }
+
+    if (corTexto && !dentroDoMenu) {
+      corrigirContrasteTexto(el, estilo, corTexto, temaEhClaro);
+    }
+  });
 }
 
 function agendarCorrecao() {

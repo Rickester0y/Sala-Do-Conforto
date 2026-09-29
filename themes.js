@@ -403,6 +403,21 @@ function gerarCSSDoTema(tema) {
   `
     : "";
 
+  // Rótulo flutuante de campo de formulário (ex: "Título", "Redação" na
+  // Redação Paulista) usa classe estável do MUI, mas no estado "não focado"
+  // costuma vir com OPACIDADE reduzida além da cor escura — só a cor não
+  // bastava. 0.85 (não 1) porque o rótulo ainda deve parecer um pouco mais
+  // discreto que o texto preenchido de verdade — só não mais quase-invisível.
+  const regraRotuloFormulario = !ehTemaClaro
+    ? `
+    .MuiInputLabel-root,
+    .MuiFormLabel-root {
+      color: #ffffff !important;
+      opacity: 0.85 !important;
+    }
+  `
+    : "";
+
   return `
     :root {
       ${variaveis}
@@ -415,6 +430,7 @@ function gerarCSSDoTema(tema) {
     }
 
     ${regraCabecalhoTabela}
+    ${regraRotuloFormulario}
 
     /* Cabeçalho (AppBar do Material UI) */
     header.MuiAppBar-root {

@@ -191,11 +191,20 @@ function atualizarPreviewCustom() {
   document.getElementById(id).addEventListener("input", atualizarPreviewCustom);
 });
 
-// Carrega o tema salvo e marca o card certo ao abrir o popup
+// Monta a lista IMEDIATAMENTE, de forma síncrona, com "padrao" como palpite —
+// isso faz o popup já nascer do tamanho certo (evita o "pulo" de vazio pra
+// cheio que acontecia enquanto esperava o chrome.storage responder). O
+// chrome.storage.sync.get logo abaixo é assíncrono por natureza (não tem como
+// evitar isso), mas como normalmente responde em poucos milissegundos, a
+// pequena correção de "padrao" pro tema real fica praticamente imperceptível
+// — bem diferente do salto de tamanho de um popup vazio se preenchendo.
+montarListaDeTemas("padrao");
+atualizarPreviewCustom();
+
+// Corrige pro tema real assim que o chrome.storage responder
 chrome.storage.sync.get(["temaSelecionado", "temaCustom"], (dados) => {
   const chave = dados.temaSelecionado || "padrao";
   montarListaDeTemas(chave);
-  atualizarPreviewCustom();
 
   const temaAtual = chave === "custom" && dados.temaCustom
     ? { vars: dados.temaCustom }

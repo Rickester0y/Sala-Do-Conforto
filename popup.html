@@ -35,6 +35,36 @@
       color: var(--sc-texto);
     }
 
+    /* A animação fica só no WRAPPER do conteúdo, nunca no body — o body carrega
+       o fundo (cor + SVG) e precisa estar 100% opaco desde o primeiro frame.
+       Antes a animação estava no body inteiro, com opacity:0 no início; isso
+       podia deixar até o FUNDO invisível por um instante, revelando o que
+       estiver atrás da janela nesse meio tempo — o suspeito mais provável pra
+       aquele quadrado escuro. Animando só o wrapper, o fundo pinta imediatamente
+       e sólido, e só o conteúdo por cima é que desliza/aparece suavemente. */
+    #sc-conteudo {
+      animation: sc-popup-entrada 180ms ease-out;
+    }
+
+    @keyframes sc-popup-entrada {
+      from {
+        opacity: 0;
+        transform: translateY(4px) scale(0.98);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    /* Quem prefere menos movimento na tela não precisa ver nem essa — respeita
+       a preferência do sistema operacional. */
+    @media (prefers-reduced-motion: reduce) {
+      #sc-conteudo {
+        animation: none;
+      }
+    }
+
     header {
       display: flex;
       align-items: center;
@@ -366,6 +396,7 @@
   </style>
 </head>
 <body>
+<div id="sc-conteudo">
   <header id="cabecalho-popup">
     <div class="cabecalho-logo">SF</div>
     <div>
@@ -408,6 +439,7 @@
   </main>
 
   <footer>Feito por um aluno, pra outros alunos 💙</footer>
+</div>
 
 
   <script src="themes.js"></script>
