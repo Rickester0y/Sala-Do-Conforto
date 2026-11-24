@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Sala Confortável — Minha imagem</title>
+<style>
+:root{
+  color-scheme:dark;
+  --acento:#4c8dff; --acento-esc:#2f6fe0; --ok:#3fb27f; --aviso:#e5a53a; --erro:#e5575d;
+  --fundo:#16181d; --painel:#1f2229; --painel2:#2a2e37; --linha:#363b47;
+  --texto:#eceff4; --suave:#9aa3b2;
+  --pv-bg:#1e222a; --pv-card:#2d3340; --pv-texto:#f2f2f5; --pv-destaque:#4c8dff;
+}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:var(--fundo);color:var(--texto);
+  font-family:"Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,sans-serif;line-height:1.5}
+.pagina{max-width:1080px;margin:0 auto;padding:0 20px 40px}
+:focus-visible{outline:2px solid var(--acento);outline-offset:2px}
+
+.topo{display:flex;align-items:center;gap:12px;padding:16px 0;border-bottom:1px solid var(--linha)}
+.logo{width:36px;height:36px;border-radius:6px;display:grid;place-items:center;font-weight:800;font-size:14px;color:#fff;background:var(--acento-esc)}
+.topo-nome{font-weight:700}
+.topo a{margin-left:auto;color:var(--suave);font-size:14px;text-decoration:none}
+.topo a:hover{color:var(--texto)}
+.titulo{padding:26px 0 20px}
+.titulo h1{margin:0 0 4px;font-size:28px;font-weight:700;letter-spacing:-.01em}
+.titulo p{margin:0;color:var(--suave);max-width:60ch}
+
+.grade{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;align-items:start}
+.coluna-lateral{position:sticky;top:16px}
+@media(max-width:860px){.grade{grid-template-columns:1fr}.coluna-lateral{position:static}}
+
+.painel{background:var(--painel);border:1px solid var(--linha);border-radius:6px;padding:20px;margin-bottom:20px}
+.coluna-lateral .painel{margin-bottom:0}
+.painel-topo{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.num{flex:none;width:28px;height:28px;border-radius:4px;display:grid;place-items:center;font-weight:700;font-size:14px;background:var(--acento-esc);color:#fff}
+.painel-topo h2{margin:0;font-size:17px;font-weight:700}
+.painel-topo p{margin:0;font-size:13px;color:var(--suave)}
+.sub{margin:18px 0 8px;font-size:14px;font-weight:700}
+
+#zona-arquivo{text-align:center;cursor:pointer;padding:26px 16px;border-radius:6px;border:2px dashed var(--linha);background:var(--fundo);transition:border-color .15s,background .15s}
+#zona-arquivo:hover,#zona-arquivo.arrastando{border-color:var(--acento);background:#1a2233}
+.zona-icone{font-size:30px;line-height:1;margin-bottom:8px}
+#zona-arquivo strong{display:block;font-size:16px}
+#zona-arquivo span{font-size:13px;color:var(--suave)}
+.formatos{margin:10px 0 0;font-size:12.5px;color:var(--suave)}
+.formatos b{color:var(--texto);font-weight:600}
+
+#info-arquivo{margin-top:14px;display:flex;gap:12px;align-items:center;padding:10px;border-radius:6px;background:var(--fundo);border:1px solid var(--linha)}
+#info-vazio{margin:0;font-size:13px;color:var(--suave)}
+#info-mini{flex:none;width:80px;height:54px;border-radius:4px;background:#000 center/cover}
+.info-dados{min-width:0;font-size:13px}
+.info-dados strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0}
+.chips span{padding:1px 8px;border-radius:4px;font-size:12px;font-weight:600;background:var(--painel2);border:1px solid var(--linha)}
+#info-aviso{margin:0;font-size:12px;color:var(--suave)}
+
+.linha{display:flex;align-items:center;gap:12px;font-size:14px}
+.linha label{flex:none;width:80px;font-weight:600}
+input[type=range]{flex:1;height:6px;border-radius:3px;appearance:none;cursor:pointer;background:linear-gradient(90deg,var(--acento) var(--pct,56%),var(--painel2) var(--pct,56%))}
+input[type=range]::-webkit-slider-thumb{appearance:none;width:16px;height:16px;border-radius:3px;background:#fff;border:2px solid var(--acento)}
+.valor{min-width:46px;text-align:right;font-size:13px;font-weight:700}
+.opcao{display:flex;gap:10px;align-items:flex-start;margin-top:16px;padding:12px;border-radius:6px;background:var(--fundo);border:1px solid var(--linha);font-size:14px;cursor:pointer}
+.opcao input{flex:none;width:18px;height:18px;margin:2px 0 0;accent-color:var(--acento)}
+.opcao b{display:block}.opcao small{display:block;margin-top:2px;font-size:12.5px;color:var(--suave)}
+.acoes{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+button{font:inherit;font-weight:600;font-size:14px;border:1px solid transparent;border-radius:6px;padding:10px 16px;cursor:pointer;color:#fff}
+.primario{flex:1 1 200px;background:var(--acento-esc)}.primario:hover{background:var(--acento)}
+.secundario{background:var(--painel2);border-color:var(--linha)}.secundario:hover{background:#343945}
+.perigo{background:transparent;border-color:var(--erro);color:#ff8b90}.perigo:hover{background:rgba(229,87,93,.12)}
+#mensagem{margin:0 0 20px;padding:12px 14px;border-radius:6px;font-size:14px;font-weight:600}
+#mensagem.erro{background:rgba(229,87,93,.12);border:1px solid var(--erro)}
+#mensagem.ok{background:rgba(63,178,127,.12);border:1px solid var(--ok)}
+.escondido{display:none!important}
+
+.janela{border-radius:6px;overflow:hidden;border:1px solid var(--linha)}
+.barra{display:flex;align-items:center;gap:6px;padding:7px 10px;background:#101216}
+.barra i{width:9px;height:9px;border-radius:50%;background:#444a57}
+.barra span{margin-left:8px;flex:1;padding:2px 10px;border-radius:4px;font-size:11px;color:var(--suave);background:var(--painel2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#preview{position:relative;height:270px;background:var(--pv-bg) center/cover;overflow:hidden}
+#preview.sem-imagem{background:var(--painel2)}
+#preview-escuro{position:absolute;inset:0}
+.tela{position:absolute;inset:0;display:grid;grid-template-columns:88px 1fr;gap:10px;padding:12px;color:var(--pv-texto);font-size:11.5px}
+.menu{display:grid;align-content:start;gap:5px}
+.menu div{padding:6px 8px;border-radius:4px;background:var(--pv-card);font-weight:600}
+.menu div:first-child{background:var(--pv-destaque);color:#111}
+.corpo{display:grid;gap:8px;align-content:start}
+#preview-card,.cartao-mini{border-radius:5px;padding:10px 12px;background:var(--pv-card);border:1px solid var(--pv-destaque);font-weight:700}
+.cartao-mini{border-color:transparent;font-weight:600}
+.cartao-mini em{display:block;height:5px;margin-top:6px;border-radius:2px;background:var(--pv-texto);opacity:.35}
+.cartao-mini em:nth-of-type(2){width:60%}
+.cartao-mini u{display:inline-block;margin-top:8px;padding:2px 9px;border-radius:3px;text-decoration:none;background:var(--pv-destaque);color:#111;font-weight:700}
+.nota-previa{margin:8px 0 0;font-size:12px;color:var(--suave)}
+
+.paleta{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.cor{border-radius:4px;overflow:hidden;border:1px solid var(--linha);font-size:12px;text-align:center}
+.cor div{height:34px}.cor span{display:block;padding:4px 2px 0;font-weight:600}.cor small{display:block;color:var(--suave);padding-bottom:4px}
+#contraste{margin:12px 0 0;display:flex;align-items:center;gap:10px;font-size:13px}
+#contraste b{padding:2px 9px;border-radius:4px;background:var(--ok);color:#06140d}
+#contraste.medio b{background:var(--aviso);color:#241a05}#contraste.baixo b{background:var(--erro);color:#fff}
+
+.ajuda{margin-top:32px}
+.ajuda h2{margin:0 0 12px;font-size:19px}
+details{margin-bottom:8px;border-radius:6px;background:var(--painel);border:1px solid var(--linha)}
+summary{cursor:pointer;padding:12px 16px;font-weight:600;list-style:none;display:flex;justify-content:space-between}
+summary::-webkit-details-marker{display:none}summary::after{content:"+";color:var(--suave)}
+details[open] summary::after{content:"−"}
+details p,details ul{margin:0;padding:0 16px 14px;font-size:14px;color:var(--suave)}
+details ul{padding-left:34px}
+footer{margin-top:28px;font-size:13px;color:var(--suave)}
+</style>
+</head>
+<body>
+<div class="pagina">
+  <div class="topo">
+    <div class="logo">SF</div>
+    <div class="topo-nome">Sala Confortável</div>
+    <a href="#ajuda">Ajuda</a>
+  </div>
+
+  <div class="titulo">
+    <h1>Minha imagem de fundo</h1>
+    <p>Escolha uma foto ou GIF, confira a prévia ao lado e salve para usar na Sala do Futuro.</p>
+  </div>
+
+  <div id="mensagem" class="escondido" role="status"></div>
+
+  <div class="grade">
+    <div>
+      <section class="painel">
+        <div class="painel-topo"><div class="num">1</div><div><h2>Escolha a imagem</h2><p>Ela fica no seu computador, não é enviada para a internet</p></div></div>
+        <div id="zona-arquivo" tabindex="0" role="button" aria-label="Escolher uma imagem do computador">
+          <div class="zona-icone">🖼️</div>
+          <strong>Clique aqui ou arraste um arquivo</strong>
+          <span>Imagens largas preenchem melhor a tela</span>
+          <p class="formatos">JPG, PNG, WebP ou GIF. Foto até <b><span id="limite-img">50</span> MB</b>, GIF até <b><span id="limite-gif">15</span> MB</b></p>
+        </div>
+        <input type="file" id="arquivo" accept="image/*" class="escondido" />
+        <div id="info-arquivo">
+          <p id="info-vazio">Nenhuma imagem escolhida. Os detalhes do arquivo aparecem aqui.</p>
+          <div id="info-mini" class="escondido"></div>
+          <div class="info-dados escondido" id="info-dados">
+            <strong id="info-nome">—</strong>
+            <div class="chips"><span id="info-tipo">—</span><span id="info-dim">—</span><span id="info-peso">—</span></div>
+            <p id="info-aviso"></p>
+          </div>
+        </div>
+      </section>
+
+      <section class="painel escondido" id="cartao-ajuste">
+        <div class="painel-topo"><div class="num">2</div><div><h2>Ajuste e salve</h2><p>A prévia muda na hora</p></div></div>
+        <div class="linha">
+          <label for="escurecer">Escurecer</label>
+          <input type="range" id="escurecer" min="0" max="80" value="45" />
+          <span class="valor" id="valor-escurecer">45%</span>
+        </div>
+        <label class="opcao">
+          <input type="checkbox" id="combinar-cores" checked />
+          <span><b>Combinar as cores com a imagem</b>
+          <small>Escolhe fundo, destaque e texto que combinam com a foto. Desmarque para manter as cores que você já criou.</small></span>
+        </label>
+        <div class="acoes">
+          <button type="button" class="primario" id="salvar">Usar como meu tema</button>
+          <button type="button" class="secundario" id="trocar">Escolher outra</button>
+          <button type="button" class="perigo escondido" id="remover">Remover imagem</button>
+        </div>
+      </section>
+    </div>
+
+    <aside class="coluna-lateral">
+      <section class="painel">
+        <div class="painel-topo"><div><h2>Prévia</h2><p>Como a Sala do Futuro vai ficar</p></div></div>
+        <div class="janela">
+          <div class="barra"><i></i><i></i><i></i><span>saladofuturo.educacao.sp.gov.br</span></div>
+          <div id="preview" class="sem-imagem">
+            <div id="preview-escuro"></div>
+            <div class="tela">
+              <div class="menu"><div>Início</div><div>Tarefas</div><div>Notas</div><div>Recados</div></div>
+              <div class="corpo">
+                <div id="preview-card">Assim vão ficar os cards 🙂</div>
+                <div class="cartao-mini">Próxima atividade<em></em><em></em><u>Abrir</u></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="nota-previa">Prévia aproximada. O visual final segue o desenho do site.</p>
+
+        <p class="sub">Cores do tema</p>
+        <div class="paleta">
+          <div class="cor"><div id="sw-bg"></div><span>Fundo</span><small id="hx-bg">—</small></div>
+          <div class="cor"><div id="sw-card"></div><span>Cards</span><small id="hx-card">—</small></div>
+          <div class="cor"><div id="sw-texto"></div><span>Texto</span><small id="hx-texto">—</small></div>
+          <div class="cor"><div id="sw-destaque"></div><span>Destaque</span><small id="hx-destaque">—</small></div>
+        </div>
+        <p id="contraste"><b id="contraste-valor">—</b><span id="contraste-texto">Escolha uma imagem para ver o contraste do texto.</span></p>
+      </section>
+    </aside>
+  </div>
+
+  <section class="ajuda" id="ajuda">
+    <h2>Ajuda</h2>
+    <details><summary>Dicas para ficar bom</summary>
+      <ul>
+        <li>Prefira imagens na horizontal, como 1920×1080.</li>
+        <li>Escurecer entre 40% e 60% costuma deixar o texto confortável.</li>
+        <li>GIFs usam mais memória, prefira os curtos e leves.</li>
+        <li>Se o contraste aparecer como “Baixo”, escureça mais ou troque a imagem.</li>
+      </ul>
+    </details>
+    <details><summary>Minha imagem é enviada para algum lugar?</summary><p>Não. Ela fica guardada só neste navegador. Apenas as cores do tema são sincronizadas com a sua conta do Chrome, se a sincronização estiver ligada.</p></details>
+    <details><summary>Por que esta página abre numa aba nova?</summary><p>O seletor de arquivos do sistema costuma fechar o popup da extensão antes de a imagem chegar. Numa aba isso não acontece.</p></details>
+    <details><summary>Como volto ao normal?</summary><p>Use “Remover imagem” aqui, ou escolha outro tema no popup da extensão.</p></details>
+    <details><summary>Por que meu arquivo não foi aceito?</summary><p>Fotos são reduzidas automaticamente, mas GIFs não (perderiam a animação), por isso têm um limite de peso menor. A mensagem na página diz o motivo.</p></details>
+  </section>
+
+  <footer>Feito por um aluno, para outros alunos.</footer>
+</div>
+<script src="imagem.js"></script>
+</body>
+</html>

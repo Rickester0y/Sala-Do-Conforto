@@ -505,13 +505,22 @@ function agendarCorrecao() {
 }
 
 function carregarTemaAtual() {
+  // A imagem do tema personalizado fica no storage.local (o sync tem um limite
+  // de ~8KB por item — pequeno demais pra uma foto); as cores continuam no sync.
   chrome.storage.sync.get(["temaSelecionado", "temaCustom"], (dados) => {
+    chrome.storage.local.get(["temaCustomImagem", "temaCustomEscurecer"], (local) => {
     const chave = dados.temaSelecionado || "padrao";
 
     let vars = {};
     let imagem = null;
+    let overlay = null;
     if (chave === "custom" && dados.temaCustom) {
       vars = { ...dados.temaCustom };
+      if (local.temaCustomImagem) {
+        imagem = local.temaCustomImagem;
+        const escurecer = Number.isFinite(local.temaCustomEscurecer) ? local.temaCustomEscurecer : 45;
+        overlay = `rgba(0, 0, 0, ${escurecer / 100})`;
+      }
     } else {
       const tema = SALA_CONFORTAVEL_THEMES[chave] || SALA_CONFORTAVEL_THEMES.padrao;
       vars = { ...tema.vars };
@@ -533,7 +542,7 @@ function carregarTemaAtual() {
     temaEhClaroAtual = corDeReferencia ? luminanciaHex(corDeReferencia) > 0.55 : false;
 
     // Isso aplica na hora, mesmo antes do <body> existir — é o que evita o flash inicial.
-    aplicarCSS(gerarCSSDoTema({ vars, imagem }));
+    aplicarCSS(gerarCSSDoTema({ vars, imagem, overlay }));
 
     // Guarda a cor de fundo atual pra já pintar a tela de carregamento certa
     // da próxima vez que essa página for aberta (antes mesmo da extensão "acordar").
@@ -566,6 +575,7 @@ function carregarTemaAtual() {
         revelarPagina(); // tema Padrão: nada a corrigir, mostra a página na hora
       }
     });
+    });
   });
 }
 
@@ -575,7 +585,9 @@ carregarTemaAtual();
 // Se o aluno trocar o tema no popup enquanto a página já está aberta,
 // atualiza na hora, sem precisar recarregar.
 chrome.storage.onChanged.addListener((mudancas, area) => {
-  if (area === "sync" && (mudancas.temaSelecionado || mudancas.temaCustom)) {
+  const mudouTema = area === "sync" && (mudancas.temaSelecionado || mudancas.temaCustom);
+  const mudouImagem = area === "local" && (mudancas.temaCustomImagem || mudancas.temaCustomEscurecer);
+  if (mudouTema || mudouImagem) {
     carregarTemaAtual();
   }
 });

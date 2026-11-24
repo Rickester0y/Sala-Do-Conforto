@@ -49,6 +49,12 @@ function calcularCorElevada(corSecundariaHex) {
 }
 // ----------------------------------------------------------------------------
 
+// Imagem de tema pronto = caminho dentro da extensão (ex: "images/trem.jpg").
+// Imagem enviada pelo próprio usuário = data URL (já vem com o conteúdo embutido).
+function urlDaImagem(caminho) {
+  return caminho.startsWith("data:") ? caminho : chrome.runtime.getURL(caminho);
+}
+
 // Cada tema tem uma "categoria", usada só pelo popup pra agrupar os temas em
 // seções (Modos, Cores Sólidas, Fotos) em vez de uma lista única.
 const SALA_CONFORTAVEL_THEMES = {
@@ -380,7 +386,7 @@ function gerarCSSDoTema(tema) {
     ? `
       background-image:
         linear-gradient(${camadaEscura}, ${camadaEscura}),
-        url("${chrome.runtime.getURL(tema.imagem)}") !important;
+        url("${urlDaImagem(tema.imagem)}") !important;
       background-size: cover !important;
       background-position: center !important;
       background-attachment: fixed !important;

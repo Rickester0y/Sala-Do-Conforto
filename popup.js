@@ -45,7 +45,7 @@ function cabecalhoEhClaro(tema) {
 // (definido no CSS) se for o tema "Padrão", que não tem cores próprias.
 function aplicarTemaNoCabecalho(tema) {
   if (tema && tema.imagem) {
-    cabecalhoEl.style.backgroundImage = `url('${chrome.runtime.getURL(tema.imagem)}')`;
+    cabecalhoEl.style.backgroundImage = `url("${urlDaImagem(tema.imagem)}")`;
   } else {
     const bg = tema && tema.vars && tema.vars["--sf-bg"];
     const bgSecundario = tema && tema.vars && tema.vars["--sf-bg-secundario"];
@@ -201,15 +201,77 @@ function atualizarPreviewCustom() {
 montarListaDeTemas("padrao");
 atualizarPreviewCustom();
 
+// Imagem do tema personalizado (enviada pelo aluno na página imagem.html).
+// Fica no storage.local porque o sync é pequeno demais pra uma foto.
+let imagemCustomAtual = null;
+
+function atualizarBlocoDeImagem() {
+  const miniatura = document.getElementById("imagem-miniatura");
+  const botaoAbrir = document.getElementById("abrir-imagem");
+  const botaoRemover = document.getElementById("remover-imagem");
+
+  if (imagemCustomAtual) {
+    miniatura.style.backgroundImage = `url("${imagemCustomAtual}")`;
+    miniatura.hidden = false;
+    botaoRemover.hidden = false;
+    botaoAbrir.textContent = "🖼️ Trocar minha imagem";
+  } else {
+    miniatura.hidden = true;
+    botaoRemover.hidden = true;
+    botaoAbrir.textContent = "🖼️ Adicionar minha imagem";
+  }
+}
+
 // Corrige pro tema real assim que o chrome.storage responder
 chrome.storage.sync.get(["temaSelecionado", "temaCustom"], (dados) => {
-  const chave = dados.temaSelecionado || "padrao";
-  montarListaDeTemas(chave);
+  chrome.storage.local.get(["temaCustomImagem"], (local) => {
+    const chave = dados.temaSelecionado || "padrao";
+    imagemCustomAtual = local.temaCustomImagem || null;
 
-  const temaAtual = chave === "custom" && dados.temaCustom
-    ? { vars: dados.temaCustom }
-    : SALA_CONFORTAVEL_THEMES[chave] || SALA_CONFORTAVEL_THEMES.padrao;
-  aplicarTemaNoCabecalho(temaAtual);
+    // Os seletores de cor mostram o tema personalizado JÁ SALVO (inclusive as
+    // cores calculadas a partir da imagem). Sem isso eles abriam sempre com os
+    // valores de fábrica, e clicar em "Usar meu tema" sobrescrevia as cores
+    // salvas por esses valores de fábrica sem o aluno perceber.
+    if (dados.temaCustom) {
+      const mapa = {
+        "cor-bg": "--sf-bg",
+        "cor-bg-secundario": "--sf-bg-secundario",
+        "cor-texto": "--sf-texto",
+        "cor-destaque": "--sf-destaque"
+      };
+      Object.entries(mapa).forEach(([id, variavel]) => {
+        const valor = dados.temaCustom[variavel];
+        if (/^#[0-9a-f]{6}$/i.test(valor || "")) document.getElementById(id).value = valor;
+      });
+      atualizarPreviewCustom();
+    }
+
+    montarListaDeTemas(chave);
+    atualizarBlocoDeImagem();
+
+    const temaAtual = chave === "custom" && dados.temaCustom
+      ? { vars: dados.temaCustom, imagem: imagemCustomAtual }
+      : SALA_CONFORTAVEL_THEMES[chave] || SALA_CONFORTAVEL_THEMES.padrao;
+    aplicarTemaNoCabecalho(temaAtual);
+  });
+});
+
+// O seletor de arquivos do sistema costuma fechar o popup de extensão, então o
+// envio da imagem acontece numa aba própria (imagem.html), que não tem esse problema.
+document.getElementById("abrir-imagem").addEventListener("click", () => {
+  chrome.tabs.create({ url: chrome.runtime.getURL("imagem.html") });
+});
+
+document.getElementById("remover-imagem").addEventListener("click", () => {
+  chrome.storage.local.remove(["temaCustomImagem", "temaCustomEscurecer"], () => {
+    imagemCustomAtual = null;
+    atualizarBlocoDeImagem();
+    chrome.storage.sync.get(["temaSelecionado", "temaCustom"], (dados) => {
+      if (dados.temaSelecionado === "custom" && dados.temaCustom) {
+        aplicarTemaNoCabecalho({ vars: dados.temaCustom });
+      }
+    });
+  });
 });
 
 // Botão "Usar meu tema": salva as 4 cores escolhidas como tema customizado
@@ -226,7 +288,7 @@ botaoSalvar.addEventListener("click", () => {
     document.querySelectorAll(".tema-card").forEach((c) => c.classList.remove("selecionado"));
     botaoSalvar.textContent = "Tema aplicado ✓";
     botaoSalvar.classList.add("salvo");
-    aplicarTemaNoCabecalho({ vars: temaCustom });
+    aplicarTemaNoCabecalho({ vars: temaCustom, imagem: imagemCustomAtual });
     setTimeout(() => {
       botaoSalvar.textContent = "Usar meu tema";
       botaoSalvar.classList.remove("salvo");

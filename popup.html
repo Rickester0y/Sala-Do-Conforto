@@ -353,6 +353,63 @@
       background: none;
     }
 
+    .imagem-custom {
+      margin-top: 6px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .imagem-custom-topo {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--sc-texto-suave);
+      padding-bottom: 8px;
+    }
+
+    .imagem-miniatura {
+      width: 56px;
+      height: 32px;
+      border-radius: 6px;
+      background-size: cover;
+      background-position: center;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+    }
+
+    button.botao-imagem {
+      width: 100%;
+      padding: 9px;
+      border: 1px dashed rgba(109, 79, 255, 0.6);
+      border-radius: 7px;
+      background: rgba(109, 79, 255, 0.12);
+      color: var(--sc-texto);
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+
+    button.botao-imagem:hover {
+      background: rgba(109, 79, 255, 0.22);
+    }
+
+    button.botao-remover {
+      display: block;
+      margin: 8px auto 0;
+      padding: 2px 4px;
+      border: none;
+      background: none;
+      color: var(--sc-texto-suave);
+      font-size: 11px;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+
+    button.botao-remover:hover {
+      color: var(--sc-texto);
+    }
+
     .preview-custom {
       height: 26px;
       border-radius: 6px;
@@ -429,6 +486,15 @@
         <div class="cor-linha">
           <span>Destaque</span>
           <input type="color" id="cor-destaque" value="#4f9dff" />
+        </div>
+
+        <div class="imagem-custom">
+          <div class="imagem-custom-topo">
+            <span>Imagem de fundo</span>
+            <div class="imagem-miniatura" id="imagem-miniatura" hidden></div>
+          </div>
+          <button type="button" class="botao-imagem" id="abrir-imagem">🖼️ Adicionar minha imagem</button>
+          <button type="button" class="botao-remover" id="remover-imagem" hidden>Remover imagem</button>
         </div>
 
         <div class="preview-custom" id="preview-custom"></div>
